@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0/EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.easychat.mapper.SessionUserMapper">
+	<!--实体映射-->
+	<resultMap id="base_result_map" type="com.easychat.entity.po.SessionUser">
+		<!--用户id-->
+		<result column="userId" property="userId"/>
+		<!--联系人id-->
+		<result column="contactId" property="contactId"/>
+		<!--会话id-->
+		<result column="sessionId" property="sessionId"/>
+		<!--联系人名称-->
+		<result column="contactName" property="contactName"/>
+	</resultMap>
+
+	<!--通用查询结果列-->
+	<sql id="base_column_list">
+		userId,contactId,sessionId,contactName
+	</sql>
+
+	<!--基础查询条件-->
+	<sql id="base_query_condition">
+		<if test="query.userId != null and query.userId!=''">
+			 and userId = #{query.userId}
+		</if>
+		<if test="query.contactId != null and query.contactId!=''">
+			 and contactId = #{query.contactId}
+		</if>
+		<if test="query.sessionId != null and query.sessionId!=''">
+			 and sessionId = #{query.sessionId}
+		</if>
+		<if test="query.contactName != null and query.contactName!=''">
+			 and contactName = #{query.contactName}
+		</if>
+	</sql>
+
+	<!--扩展的查询条件-->
+	<sql id="base_query_condition_extend">
+		<if test="query.userIdFuzzy != null and query.userIdFuzzy !=''">
+			and userId like concat('%', #{query.userIdFuzzy}, '%')
+		</if>
+		<if test="query.contactIdFuzzy != null and query.contactIdFuzzy !=''">
+			and contactId like concat('%', #{query.contactIdFuzzy}, '%')
+		</if>
+		<if test="query.sessionIdFuzzy != null and query.sessionIdFuzzy !=''">
+			and sessionId like concat('%', #{query.sessionIdFuzzy}, '%')
+		</if>
+		<if test="query.contactNameFuzzy != null and query.contactNameFuzzy !=''">
+			and contactName like concat('%', #{query.contactNameFuzzy}, '%')
+		</if>
+	</sql>
+
+	<!--通用查询条件-->
+	<sql id="query_condition">
+		<where>
+			<include refid="base_query_condition"/>
+			<include refid="base_query_condition_extend"/>
+		</where>
+	</sql>
+
+	<!--查询列表-->
+	<select id="selectList" resultMap="base_result_map">
+		SELECT
+		u.*,
+		c.lastMessage AS lastMessage,
+		c.lastReceiveTime AS lastReceiveTime,
+		CASE
+		WHEN SUBSTRING(u.contactId COLLATE utf8mb4_general_ci, 1, 1) = 'G'
+		THEN (SELECT COUNT(1) FROM user_contact uc WHERE uc.contact_id = u.contactId COLLATE utf8mb4_general_ci)
+		ELSE 0
+		END AS memberCount
+		FROM
+		chat_session_user u
+		INNER JOIN
+		chat_session c
+		ON
+		c.sessionId = u.sessionId
+		<include refid="query_condition"/>
+		<if test="query.orderBy!=null">order by #{query.orderBy}</if>
+		<if test="query.simplePage!=null">limit #{query.simplePage.start},#{query.simplePage.end}</if>
+	</select>
+
+
+	<!--查询数量-->
+	<select id="selectCount" resultType="java.lang.Integer">
+		SELECT count(1) FROM chat_session_user <include refid="query_condition"/>
+	</select>
+
+	<!--插入(匹配有值的字段)-->
+	<insert id="insert" parameterType="com.easychat.entity.po.SessionUser">
+		INSERT INTO chat_session_user
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="bean.userId !=null">
+				userId,
+			</if>
+			<if test="bean.contactId !=null">
+				contactId,
+			</if>
+			<if test="bean.sessionId !=null">
+				sessionId,
+			</if>
+			<if test="bean.contactName !=null">
+				contactName,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="bean.userId !=null">
+				#{bean.userId},
+			</if>
+			<if test="bean.contactId !=null">
+				#{bean.contactId},
+			</if>
+			<if test="bean.sessionId !=null">
+				#{bean.sessionId},
+			</if>
+			<if test="bean.contactName !=null">
+				#{bean.contactName},
+			</if>
+		</trim>
+	</insert>
+
+	<!--插入或更新(匹配有值的字段)-->
+	<insert id="insertOrUpdate" parameterType="com.easychat.entity.po.SessionUser">
+		INSERT INTO chat_session_user
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="bean.userId !=null">
+				userId,
+			</if>
+			<if test="bean.contactId !=null">
+				contactId,
+			</if>
+			<if test="bean.sessionId !=null">
+				sessionId,
+			</if>
+			<if test="bean.contactName !=null">
+				contactName,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="bean.userId !=null">
+				#{bean.userId},
+			</if>
+			<if test="bean.contactId !=null">
+				#{bean.contactId},
+			</if>
+			<if test="bean.sessionId !=null">
+				#{bean.sessionId},
+			</if>
+			<if test="bean.contactName !=null">
+				#{bean.contactName},
+			</if>
+		</trim>
+		on DUPLICATE key update
+		<trim prefix="" suffix="" suffixOverrides=",">
+			<if test="bean.sessionId !=null">
+				sessionId = VALUES(sessionId),
+			</if>
+			<if test="bean.contactName !=null">
+				contactName = VALUES(contactName),
+			</if>
+		</trim>
+	</insert>
+	<!--批量插入-->
+	<insert id="insertBatch" parameterType="com.easychat.entity.po.SessionUser">
+		INSERT INTO chat_session_user(userId,contactId,sessionId,contactName)values 
+		<foreach collection="list" item="item" separator="," open="(" close=")">
+			(#{item.userId},#{item.contactId},#{item.sessionId},#{item.contactName})
+		</foreach>
+	</insert>
+	<!--批量插入或更新-->
+	<insert id="insertOrUpdateBatch" parameterType="com.easychat.entity.po.SessionUser">
+		INSERT INTO chat_session_user(userId,contactId,sessionId,contactName)values 
+		<foreach collection="list" item="item" separator=",">
+			(#{item.userId},#{item.contactId},#{item.sessionId},#{item.contactName})
+		</foreach>
+		on DUPLICATE key update
+		userId = VALUES(userId),contactId = VALUES(contactId),sessionId = VALUES(sessionId),contactName = VALUES(contactName)
+	</insert>
+
+	<!--根据UserIdAndContactId查询-->
+	<select id="selectByUserIdAndContactId" resultMap="base_result_map">
+		select <include refid="base_column_list"/> from chat_session_user where userId=#{userId} and contactId=#{contactId}
+	</select>
+
+	<!--根据UserIdAndContactId更新-->
+	<update id="updateByUserIdAndContactId" parameterType="com.easychat.entity.po.SessionUser">
+		update chat_session_user
+		<set>
+			<if test="bean.userId!=null">
+				userId =#{bean.userId},
+			</if>
+			<if test="bean.contactId!=null">
+				contactId =#{bean.contactId},
+			</if>
+			<if test="bean.sessionId!=null">
+				sessionId =#{bean.sessionId},
+			</if>
+			<if test="bean.contactName!=null">
+				contactName =#{bean.contactName},
+			</if>
+		</set>
+		where userId=#{userId} and contactId=#{contactId}
+	</update>
+
+	<!--多条件修改-->
+	<update id="updateByParam" parameterType="com.easychat.entity.query.SessionUserQuery">
+		UPDATE chat_session_user
+		<set>
+			<if test="bean.userId != null">
+				user_id = #{bean.userId},
+			</if>
+			<if test="bean.contactId != null">
+				contact_id = #{bean.contactId},
+			</if>
+			<if test="bean.sessionId != null">
+				session_id = #{bean.sessionId},
+			</if>
+			<if test="bean.contactName != null">
+				contact_name = #{bean.contactName},
+			</if>
+		</set>
+		<include refid="query_condition" />
+	</update>
+
+
+	<!--根据UserIdAndContactId删除-->
+	<delete id="deleteByUserIdAndContactId">
+		delete from chat_session_user where userId=#{userId} and contactId=#{contactId}
+	</delete>
+
+</mapper>
